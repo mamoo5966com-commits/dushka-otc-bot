@@ -209,4 +209,14 @@ if __name__ == '__main__':
     t = Thread(target=run_web)
     t.start()
     print("🤖 Technical Analysis OTC Bot is active...")
-    bot.infinity_polling()
+    
+    # تفريغ الـ Webhook وإدارة الاتصال لتجنب خطأ التعارض نهائياً
+    bot.remove_webhook()
+    time.sleep(1)
+    
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"Polling error: {e}")
+            time.sleep(5)
