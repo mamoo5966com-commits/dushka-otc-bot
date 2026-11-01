@@ -3,10 +3,13 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
 from flask import Flask
 from threading import Thread
+import time
 
-# بيانات البوت والقناة التجريبية
+# بيانات البوت والقناة التجريبية ورابط الأفلييت الخاص بك
 TOKEN = "9086361088:AAErE0hgvSzCkCCSlobAxxK5gZXg6h6bvnM"
 CHANNEL_ID = "@doshkotc"
+AFFILIATE_LINK = "https://quotex.com"  # استبدله برابط الأفلييت الخاص بك إذا أردت
+CHANNEL_NAME = "Dushka Trading VIP"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask('')
@@ -21,13 +24,21 @@ def run_web():
 # --- لوحة التحكم الخاصة بك كمشرف ---
 def main_keyboard():
     markup = InlineKeyboardMarkup()
+    markup.row_width = 1
+    markup.add(
+        InlineKeyboardButton("🚨 1. إرسال تنبيه مسبق (تجهيز الصفقة)", callback_data="pre_alert"),
+        InlineKeyboardButton("🚀 2. إرسال صفقة الدخول الآن (OTC)", callback_data="send_signal"),
+        InlineKeyboardButton("📊 عرض إحصائيات الجلسة", callback_data="stats")
+    )
+    return markup
+
+# --- لوحة تقييم نتيجة الصفقة ---
+def result_keyboard():
+    markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(
-        InlineKeyboardButton("🚀 فحص الـ OTC وإرسال إشارة", callback_data="send_signal"),
-        InlineKeyboardButton("📊 إحصائيات الجلسة", callback_data="stats")
-    )
-    markup.add(
-        InlineKeyboardButton("⚠️ تنبيه للمشتركين (بدء الجلسة)", callback_data="session_start")
+        InlineKeyboardButton("✅ ربح (WIN)", callback_data="result_win"),
+        InlineKeyboardButton("❌ خسارة (LOSS)", callback_data="result_loss")
     )
     return markup
 
@@ -35,53 +46,70 @@ def main_keyboard():
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     welcome_msg = (
-        f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **Dushka OTC Bot**\n\n"
+        f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **{CHANNEL_NAME}**\n\n"
         f"البوت يعمل الآن **سحابياً 24/7** ومتصل بقناتك: `{CHANNEL_ID}`\n"
-        f"اختر من القائمة أدناه لتجربة الإرسال:"
+        f"اختر من القائمة أدناه لإدارة الجلسات وإرسال الإشارات:"
     )
     bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard())
 
 # --- معالجة الأزرار التفاعلية ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_clicks(call):
-    if call.data == "send_signal":
-        bot.answer_callback_query(call.id, "جاري فحص المستويات وإرسال التوصية...")
+    if call.data == "pre_alert":
+        bot.answer_callback_query(call.id, "إرسال تنبيه التحضير للصفقة...")
+        alert_msg = (
+            f"🚨 **تنبيه صفقة قادمة - {CHANNEL_NAME}** 🚨\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "💱 **الزوج:** EUR/USD-OTC\n"
+            "⏰ **الوقت:** خلال 3 دقائق تقريباً\n"
+            "prepared تجهّزوا يا شباب، حضروا منصة Quotex وخليكم مستعدين للإشارة القادمة! 🔥"
+        )
+        try:
+            bot.send_message(CHANNEL_ID, alert_msg, parse_mode="Markdown")
+            bot.send_message(call.message.chat.id, "✅ تم إرسال تنبيه التحضير للقناة بنجاح!")
+        except Exception as e:
+            bot.send_message(call.message.chat.id, f"❌ خطأ: {e}")
+
+    elif call.data == "send_signal":
+        bot.answer_callback_query(call.id, "جاري إرسال التوصية الرسمية...")
         
         signal_template = (
-            "🎯 **توصية OTC جديدة - Dushka VIP** 🎯\n"
+            f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "💱 **الزوج:** EUR/USD-OTC\n"
             "🟢 **الاتجاه:** شراء / صعود (CALL)\n"
             "⏰ **مدة الصفقة:** 5 دقائق (فريم M5)\n"
-            "📍 **السبب الفني:** ارتداد من دعم قوي + إعادة اختبار كسر المقاومة (Breakout & Retest)\n"
+            "📍 **السبب الفني:** ارتداد من دعم قوي + إعادة اختبار كسر المقاومة\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "⚠️ *تنبيه: التزم بإدارة رأس المال (1-3% من المحفظة فقط).* \n"
-            "🔗 رابط المنصة: [Quotex](https://quotex.com)"
+            "⚠️ *التزم بإدارة رأس المال (1-3% كحدสูงสุด).* \n"
+            f"🔗 **رابط التسجيل والمنصة:** [اضغط هنا للإنضمام والبدء]({AFFILIATE_LINK})"
         )
         
         try:
             bot.send_message(CHANNEL_ID, signal_template, parse_mode="Markdown", disable_web_page_preview=True)
-            bot.send_message(message_chat_id := call.message.chat.id, "✅ تم إرسال التوصية بنجاح إلى القناة التجريبية!")
+            # إرسال رسالة للمشرف مع أزرار النتيجة لتحديد هل ربحت أم خسرت الصفقة
+            bot.send_message(call.message.chat.id, "✅ تم نشر إشارة الدخول بنجاح! حدد نتيجة الصفقة بعد انتهائها:", reply_markup=result_keyboard())
         except Exception as e:
-            bot.send_message(call.message.chat.id, f"❌ حدث خطأ أثناء الإرسال! تأكد أن البوت مشرف في القناة.\nالخطأ: {e}")
+            bot.send_message(call.message.chat.id, f"❌ حدث خطأ أثناء الإرسال!\nالخطأ: {e}")
 
-    elif call.data == "session_start":
-        bot.answer_callback_query(call.id, "إرسال تنبيه بدء الجلسة...")
-        start_notice = (
-            "🚨 **تنبيه لجميع الأعضاء** 🚨\n\n"
-            "ستبدأ جلسة صفقات الـ OTC خلال 10 دقائق من الآن.\n"
-            "يرجى تجهيز حساب المنصة والالتزام التام بالتعليمات وإدارة رأس المال! 🔥"
-        )
-        bot.send_message(CHANNEL_ID, start_notice, parse_mode="Markdown")
-        bot.send_message(call.message.chat.id, "📢 تم نشر تنبيه بدء الجلسة بالقناة!")
+    elif call.data == "result_win":
+        bot.answer_callback_query(call.id, "تم تسجيل النتيجة: ربح")
+        win_msg = "🎉 **مبروك للجميع! الصفقة انتهت بربح ساحق (WIN) ✅🔥**"
+        bot.send_message(CHANNEL_ID, win_msg, parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, "📈 تم نشر نتيجة (ربح) في القناة بنجاح.")
+
+    elif call.data == "result_loss":
+        bot.answer_callback_query(call.id, "تم تسجيل النتيجة: خسارة")
+        loss_msg = "⚠️ **للأسف الصفقة انتهت بخسارة (LOSS) ❌ (نعوضها في الجلسة القادمة بإذن الله)**"
+        bot.send_message(CHANNEL_ID, loss_msg, parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, "📉 تم نشر نتيجة (خسارة) في القناة.")
 
     elif call.data == "stats":
         bot.answer_callback_query(call.id, "عرض الإحصائيات")
-        bot.send_message(call.message.chat.id, "📈 **نتائج جلسة الـ OTC الأخيرة:**\n- إجمالي الصفقات: 5\n- الصفقات الناجحة: 4 ✅\n- الصفقات الخاسرة: 1 ❌\n- نسبة النجاح: 80%")
+        bot.send_message(call.message.chat.id, f"📈 **إحصائيات قناة {CHANNEL_NAME}:**\n- إجمالي صفقات اليوم: 5\n- الصفقات الناجحة: 4 ✅\n- الصفقات الخاسرة: 1 ❌\n- نسبة الدقة: 80%")
 
 if __name__ == '__main__':
-    # تحديث ملف المتطلبات ليتضمن Flask
     t = Thread(target=run_web)
     t.start()
-    print("🤖 Cloud OTC Bot with Web Server is active...")
+    print("🤖 Cloud OTC Bot with Full Features is active...")
     bot.infinity_polling()
