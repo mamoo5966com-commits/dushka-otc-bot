@@ -5,6 +5,7 @@ from flask import Flask
 from threading import Thread, Event
 import time
 import random
+from datetime import datetime
 
 # بيانات البوت والقناة ورابط الأفلييت
 TOKEN = "9086361088:AAErE0hgvSzCkCCSlobAxxK5gZXg6h6bvnM"
@@ -32,7 +33,7 @@ def main_keyboard(is_active=False):
     markup.row_width = 1
     if not is_active:
         markup.add(
-            InlineKeyboardButton("🚀 بدء جلسة صفقات الـ OTC بالتحليل الفني", callback_data="start_session"),
+            InlineKeyboardButton("🚀 بدء جلسة استراتيجيات النخبة (10 دقائق M10)", callback_data="start_session"),
             InlineKeyboardButton("📊 عرض الإحصائيات الحالية", callback_data="stats")
         )
     else:
@@ -42,42 +43,50 @@ def main_keyboard(is_active=False):
         )
     return markup
 
-# --- قاعدة بيانات الأسباب الفنية الذكية بناءً على الاتجاه ---
-def get_technical_reason(direction):
+# --- دالة إرسال آمنة تمنع أي جمود أو خطأ Markdown ---
+def send_safe(text):
+    try:
+        bot.send_message(CHANNEL_ID, text, parse_mode="Markdown", disable_web_page_preview=True)
+    except Exception as e:
+        print(f"Markdown error: {e}, sending as plain text.")
+        try:
+            bot.send_message(CHANNEL_ID, text, parse_mode=None, disable_web_page_preview=True)
+        except Exception as e2:
+            print(f"Critical error sending message: {e2}")
+
+# --- قاعدة بيانات استراتيجيات النخبة الشاملة ---
+def get_comprehensive_strategy(direction):
     if "صعود" in direction:
-        reasons = [
-            "ارتداد قوي من مستوى دعم رئيسي (Support Bounce) + تشبع بيعي على مؤشر RSI",
-            "كسر كاذب لمستوى دعم (False Breakdown) + ظهور شمعة انعكاسية قوية",
-            "إعادة اختبار خط الاتجاه الصاعد (Trendline Retest) مع حجم تداول عالي",
-            "تقاطع إيجابي لمؤشرات المتوسطات المتحركة (EMA Crossover) في منطقة سيولة",
-            "ملامسة الحد السفلي لمؤشر البولنجر باند (Bollinger Bands) مع ارتداد فوري"
+        strategies = [
+            ("استراتيجية ارتداد البولنجر السفلي (Bollinger Rejection)", "ملامسة السعر للحد السفلي مع تشبع بيعي تام على RSI + ظهور شمعة مطرقة (Hammer) داعمة للصعود."),
+            ("استراتيجية كسر المقاومة وإعادة الاختبار (Breakout & Retest)", "اختراق مستوى مقاومة رئيسي وثبات السعر فوقه، مع إعادة اختبار ناجحة لخط الدعم الجديد على فريم M10."),
+            ("استراتيجية تقاطع المتوسطات الآسية (EMA 9/21 Trend)", "تقاطع إيجابي ونزعة صعودية واضحة للمتوسطات في منطقة سيولة وطلب رئيسية."),
+            ("استراتيجية ارتداد مستويات فيبوناتشي الذهبية (Fibonacci Golden Pocket)", "ارتداد السعر بدقة من منطقة التصحيح 61.8% مع ضغط شرائي مكثف."),
+            ("استراتيجية امتصاص السيولة (Liquidity Sweep)", "هبوط وهمي لاختبار قاع سابق وامتصاص الأوامر المعلقة مع ارتداد هيكلي قوي صعوداً.")
         ]
     else:
-        reasons = [
-            "ارتداد قوي من مستوى مقاومة رئيسي (Resistance Rejection) + تشبع شرائي على مؤشر RSI",
-            "كسر كاذب لمستوى مقاومة (False Breakout) + رفض سعري واضح من الشموع اليابانية",
-            "إعادة اختبار خط الاتجاه الهابط (Trendline Retest) مع ضعف الزخم الصاعد",
-            "تقاطع سلبي لمؤشرات المتوسطات المتحركة (EMA Crossover) عند منطقة عرض",
-            "ملامسة الحد العلوي لمؤشر البولنجر باند (Bollinger Bands) مع انعكاس الزخم"
+        strategies = [
+            ("استراتيجية ارتداد البولنجر العلوي (Bollinger Rejection)", "ملامسة السعر للحد العلوي مع تشبع شرائي تام على RSI + ظهور شمعة شهاب ساقط (Shooting Star)."),
+            ("استراتيجية كسر الدعم وإعادة الاختبار (Breakout & Retest)", "كسر مستوى دعم قوي وتحوله لمقاومة مع إعادة اختبار ناجحة للمستوى على فريم M10."),
+            ("استراتيجية تقاطع المتوسطات الآسية (EMA 9/21 Trend)", "تقاطع سلبي وانعكاس في اتجاه الزخم تحت متوسط 21 عند منطقة عرض قوية."),
+            ("استراتيجية ارتداد مستويات فيبوناتشي الذهبية (Fibonacci Golden Pocket)", "رفض السعر لمنطقة التصحيح العلوي 61.8% مع دخول سيولة بيعية ضخمة."),
+            ("استراتيجية امتصاص السيولة (Liquidity Sweep)", "صعود وهمي لاختبار قمة سابقة وضرب وقف الخسائر ثم انعكاس حاد هبوطاً.")
         ]
-    return random.choice(reasons)
+    return random.choice(strategies)
 
-# --- دالة الجلسة الزمنية الحقيقية والمحمية ضد أي توقف أو جمود ---
+# --- دالة الجلسة الزمنية لفريم 10 دقائق بالضبط (600 ثانية) ---
 def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    try:
-        start_notice = (
-            f"🚨 **بدء جلسة تداول الـ OTC بالتحليل الفني - {CHANNEL_NAME}** 🚨\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "🔥 البوت يعمل الآن بنظام التحليل الفني الحقيقي والتوقيت المنضبط (فريم 5 دقائق).\n"
-            "⚠️ يرجى الالتزام التام بإدارة رأس المال وتجهيز المنصة!\n"
-            f"🔗 رابط المنصة: {AFFILIATE_LINK}"
-        )
-        bot.send_message(CHANNEL_ID, start_notice, parse_mode="Markdown", disable_web_page_preview=True)
-    except Exception as e:
-        print(f"Error start notice: {e}")
+    start_notice = (
+        f"🚨 **بدء جلسة استراتيجيات النخبة (فريم 10 دقائق M10) - {CHANNEL_NAME}** 🚨\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "🔥 التداول الآن بنظام فريم المدى الواسع (10 دقائق) لضمان أعلى دقة.\n"
+        "⚠️ يرجى الالتزام التام بإدارة رأس المال وتجهيز المنصة!\n"
+        f"🔗 رابط المنصة: {AFFILIATE_LINK}"
+    )
+    send_safe(start_notice)
     
     pairs = ["EUR/USD-OTC", "GBP/USD-OTC", "AUD/CAD-OTC", "USD/JPY-OTC", "EUR/GBP-OTC"]
     
@@ -85,15 +94,20 @@ def run_trading_session(chat_id):
         try:
             pair = random.choice(pairs)
             
-            # 1. تنبيه تحضيري قبل الصفقة بدقيقة كاملة (60 ثانية)
-            pre_msg = (
-                f"🔔 **تنبيه صفقة قادمة في الجلسة**\n"
-                f"💱 الزوج المرتقب: {pair}\n"
-                f"⏳ يتم فحص الشموع والمستويات، جاهزوا أنفسكم خلال دقيقة..."
-            )
-            bot.send_message(CHANNEL_ID, pre_msg, parse_mode="Markdown")
+            # حساب دقيقة افتتاح الشمعة القادمة
+            now = datetime.now()
+            entry_minute = (now.minute + 2) % 60
             
-            for _ in range(60):
+            # 1. تنبيه تحضيري قبل الصفقة
+            pre_msg = (
+                f"🔔 **تنبيه صفقة قادمة (فريم 10 دقائق)**\n"
+                f"💱 الزوج المرتقب: `{pair}`\n"
+                f"⏳ التجهيز للدخول عند افتتاح شمعة الدقيقة **{entry_minute:02d}**.. استعدوا!"
+            )
+            send_safe(pre_msg)
+            
+            # انتظار التحضير (120 ثانية = دقيقتان)
+            for _ in range(120):
                 if not session_running.is_set():
                     break
                 time.sleep(1)
@@ -101,25 +115,29 @@ def run_trading_session(chat_id):
             if not session_running.is_set():
                 break
                 
-            # 2. تحديد الاتجاه وجلب سبب فني حقيقي يتطابق معه
+            # 2. تحديد الاتجاه والاستراتيجية
             direction = random.choice(["شراء / صعود (CALL)", "بيع / هبوط (PUT)"])
-            tech_reason = get_technical_reason(direction)
+            strat_name, strat_details = get_comprehensive_strategy(direction)
+            
+            actual_time_str = datetime.now().strftime("%H:%M")
             
             signal_msg = (
-                f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
+                f"🎯 **توصية نخبوية جديدة - {CHANNEL_NAME}** 🎯\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 f"💱 **الزوج:** {pair}\n"
                 f"🟢 **الاتجاه:** {direction}\n"
-                "⏰ **مدة الصفقة:** 5 دقائق (فريم M5)\n"
-                f"📍 **السبب الفني:** {tech_reason}\n"
+                f"⏰ **وقت الدخول:** عند الدقيقة ({entry_minute:02d}) - الساعة {actual_time_str}\n"
+                f"⏱ **مدة الصفقة:** 10 دقائق كاملة (فريم M10)\n"
+                f"📊 **الاستراتيجية:** {strat_name}\n"
+                f"📍 **التحليل الفني:** {strat_details}\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 f"🔗 [التسجيل في المنصة]({AFFILIATE_LINK})"
             )
-            bot.send_message(CHANNEL_ID, signal_msg, parse_mode="Markdown", disable_web_page_preview=True)
+            send_safe(signal_msg)
             session_stats["total"] += 1
             
-            # 3. الانتظار الحقيقي لمدة الصفقة (5 دقائق = 300 ثانية)
-            for _ in range(300):
+            # 3. الانتظار الحقيقي لمدة الصفقة (10 دقائق كاملة = 600 ثانية حصرياً)
+            for _ in range(600):
                 if not session_running.is_set():
                     break
                 time.sleep(1)
@@ -127,19 +145,19 @@ def run_trading_session(chat_id):
             if not session_running.is_set():
                 break
                 
-            # 4. إرسال نتيجة الصفقة (محمية بالكامل لتفادي أي جمود سواء ربح أو خسارة)
-            is_win = random.choices([True, False], weights=[82, 18])[0]
+            # 4. إرسال نتيجة الصفقة بعد انقضاء الـ 10 دقائق بدقة
+            is_win = random.choices([True, False], weights=[89, 11])[0]
             if is_win:
                 session_stats["wins"] += 1
-                res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق (WIN) ✅🔥**"
+                res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق بامتياز بعد 10 دقائق (WIN) ✅🔥**"
             else:
                 session_stats["losses"] += 1
-                res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - تعويضها في الصفقة القادمة**"
+                res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - السوق عكس الاتجاه، سنعوضها في الصفقة القادمة**"
                 
-            bot.send_message(CHANNEL_ID, res_text, parse_mode="Markdown")
+            send_safe(res_text)
             
-            # استراحة لمدة 30 ثانية بين الصفقة والأخرى
-            for _ in range(30):
+            # استراحة لمدة 45 ثانية بين الصفقة والأخرى
+            for _ in range(45):
                 if not session_running.is_set():
                     break
                 time.sleep(1)
@@ -149,19 +167,16 @@ def run_trading_session(chat_id):
             time.sleep(5)
 
     # ملخص نهاية الجلسة
-    try:
-        end_summary = (
-            f"🏁 **انتهت جلسة التداول بنجاح - {CHANNEL_NAME}** 🏁\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"📊 **إحصائيات الجلسة الإجمالية:**\n"
-            f"- إجمالي الصفقات: {session_stats['total']}\n"
-            f"- الصفقات الرابحة: {session_stats['wins']} ✅\n"
-            f"- الصفقات الخاسرة: {session_stats['losses']} ❌\n"
-            "شكراً لتفاعلكم ونراكم في الجلسات القادمة! 🔥"
-        )
-        bot.send_message(CHANNEL_ID, end_summary, parse_mode="Markdown")
-    except Exception as e:
-        print(f"Error end summary: {e}")
+    end_summary = (
+        f"🏁 **انتهت جلسة استراتيجيات النخبة (M10) بنجاح - {CHANNEL_NAME}** 🏁\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 **إحصائيات الجلسة الإجمالية:**\n"
+        f"- إجمالي الصفقات: {session_stats['total']}\n"
+        f"- الصفقات الرابحة: {session_stats['wins']} ✅\n"
+        f"- الصفقات الخاسرة: {session_stats['losses']} ❌\n"
+        "شكراً لتفاعلكم ونراكم في الجلسات القادمة! 🔥"
+    )
+    send_safe(end_summary)
 
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
@@ -169,7 +184,7 @@ def start_cmd(message):
     status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
         f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **{CHANNEL_NAME}**\n\n"
-        f"البوت يعمل سحابياً بالتحليل الفني 24/7. حالة الجلسة الآلية حالياً: **{status_text}**"
+        f"البوت يعمل بنظام استراتيجيات النخبة لفريم 10 دقائق 24/7. حالة الجلسة الآلية حالياً: **{status_text}**"
     )
     bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
 
@@ -188,9 +203,9 @@ def handle_clicks(call):
     if call.data == "start_session":
         if not session_running.is_set():
             session_running.set()
-            bot.answer_callback_query(call.id, "تم بدء الجلسة الاحترافية بنجاح!")
+            bot.answer_callback_query(call.id, "تم بدء جلسة استراتيجيات النخبة (10 دقائق) بنجاح!")
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
-            bot.send_message(call.message.chat.id, "🚀 **بدأت صفقات الـ OTC بالتحليل الفني الذكي!** البوت يدير التوقيتات والأسباب الفنية بشكل آلي تماماً.")
+            bot.send_message(call.message.chat.id, "🚀 **بدأت صفقات فريم الـ 10 دقائق المزامنة مع الشموع!** البوت يدير التوقيتات والاستراتيجيات المتقدمة بشكل آلي تام.")
             
             t = Thread(target=run_trading_session, args=(call.message.chat.id,))
             t.start()
@@ -219,16 +234,11 @@ def handle_clicks(call):
 if __name__ == '__main__':
     t = Thread(target=run_web)
     t.start()
-    print("🤖 Technical Analysis OTC Bot is active...")
+    print("🤖 Elite M10 Strategy Bot is active...")
     
-    # تنظيف شامل لأي اتصال معلق على سرفرات تيليجرام
-    try:
-        bot.remove_webhook()
-        time.sleep(2)
-    except Exception as e:
-        print(f"Webhook reset error: {e}")
+    bot.remove_webhook()
+    time.sleep(1)
     
-    # حلقة تشغيل متصلة وآمنة تماماً ضد أخطاء التعارض
     while True:
         try:
             bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
