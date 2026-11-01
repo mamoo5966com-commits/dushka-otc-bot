@@ -38,7 +38,7 @@ def main_keyboard(is_active=False):
     else:
         markup.add(
             InlineKeyboardButton("🛑 إيقاف الجلسة الحالية (STOP)", callback_data="stop_session"),
-            InlineKeyboardButton("📊 عرض إحصائيات الجلسة", callback_data="stats")
+            InlineKeyboardButton("📊 عرض الإحصائيات الحالية", callback_data="stats")
         )
     return markup
 
@@ -47,7 +47,6 @@ def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    # رسالة بدء الجلسة في القناة
     start_notice = (
         f"🚨 **بدء جلسة تداول الـ OTC الرسمية - {CHANNEL_NAME}** 🚨\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -60,7 +59,6 @@ def run_trading_session(chat_id):
     pairs = ["EUR/USD-OTC", "GBP/USD-OTC", "AUD/CAD-OTC", "USD/JPY-OTC", "EUR/GBP-OTC"]
     
     while session_running.is_set():
-        # 1. إرسال تنبيه تحضيري قبل الصفقة
         pair = random.choice(pairs)
         pre_msg = (
             f"🔔 **تنبيه صفقة قادمة في الجلسة**\n"
@@ -69,7 +67,6 @@ def run_trading_session(chat_id):
         )
         bot.send_message(CHANNEL_ID, pre_msg, parse_mode="Markdown")
         
-        # انتظار 10 ثوانٍ (للتجربة، ويمكن زيادتها لاحقاً) قبل الإرسال الفعلي
         for _ in range(10):
             if not session_running.is_set():
                 break
@@ -78,7 +75,6 @@ def run_trading_session(chat_id):
         if not session_running.is_set():
             break
             
-        # 2. إرسال صفقة الدخول
         direction = random.choice(["شراء / صعود (CALL)", "بيع / هبوط (PUT)"])
         signal_msg = (
             f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
@@ -93,7 +89,6 @@ def run_trading_session(chat_id):
         bot.send_message(CHANNEL_ID, signal_msg, parse_mode="Markdown", disable_web_page_preview=True)
         session_stats["total"] += 1
         
-        # انتظار مدة الصفقة (مثلاً 15 ثانية تجريبية، أو استبدلها بـ 300 ثانية للـ 5 دقائق الحقيقية)
         for _ in range(15):
             if not session_running.is_set():
                 break
@@ -102,8 +97,7 @@ def run_trading_session(chat_id):
         if not session_running.is_set():
             break
             
-        # 3. إرسال النتيجة تلقائياً
-        is_win = random.choices([True, False], weights=[85, 15])[0] # نسبة نجاح 85%
+        is_win = random.choices([True, False], weights=[85, 15])[0]
         if is_win:
             session_stats["wins"] += 1
             res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق (WIN) ✅🔥**"
@@ -113,13 +107,11 @@ def run_trading_session(chat_id):
             
         bot.send_message(CHANNEL_ID, res_text, parse_mode="Markdown")
         
-        # فاصل زمني بين الصفقات (مثلاً 10 ثوانٍ)
         for _ in range(10):
             if not session_running.is_set():
                 break
             time.sleep(1)
 
-    # عند توقف الجلسة
     end_summary = (
         f"🏁 **انتهت جلسة التداول بنجاح - {CHANNEL_NAME}** 🏁\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -131,17 +123,16 @@ def run_trading_session(chat_id):
     )
     bot.send_message(CHANNEL_ID, end_summary, parse_mode="Markdown")
 
-# --- أمر التشغيل /start ---
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     is_active = session_running.is_set()
+    status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
         f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **{CHANNEL_NAME}**\n\n"
-        f"البوت يعمل سحابياً 24/7. حالة الجلسة الآلية حالياً: **{'نشطة 🚀' ` if is_active else 'متوقفة 🛑'}**"
+        f"البوت يعمل سحابياً 24/7. حالة الجلسة الآلية حالياً: **{status_text}**"
     )
     bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
 
-# --- أمر إيقاف الجلسة السريع من التيليجرام /stop ---
 @bot.message_handler(commands=['stop'])
 def stop_cmd(message):
     if session_running.is_set():
@@ -150,7 +141,6 @@ def stop_cmd(message):
     else:
         bot.send_message(message.chat.id, "⚠️ لا توجد جلسة نشطة أساساً لتوقيفها.")
 
-# --- معالجة الأزرار التفاعلية ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_clicks(call):
     global session_running
@@ -162,7 +152,6 @@ def handle_clicks(call):
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
             bot.send_message(call.message.chat.id, "🚀 **بدأت صفقات الـ OTC الآلية بالعمل!** البوت يرسل الصفقات الآن للقناة تباعاً.")
             
-            # تشغيل خيط الجلسة في الخلفية
             t = Thread(target=run_trading_session, args=(call.message.chat.id,))
             t.start()
         else:
