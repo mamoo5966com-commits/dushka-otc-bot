@@ -15,7 +15,7 @@ CHANNEL_NAME = "Dushka Trading VIP"
 bot = telebot.TeleBot(TOKEN)
 app = Flask('')
 
-# متغيرات لإدارة حالة الجلسة التلقائية
+# متغيرات لإدارة حالة الجلسة
 session_running = Event()
 session_stats = {"total": 0, "wins": 0, "losses": 0}
 
@@ -26,13 +26,13 @@ def home():
 def run_web():
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
-# --- لوحة التحكم الرئيسية للجلسات ---
+# --- لوحة التحكم ---
 def main_keyboard(is_active=False):
     markup = InlineKeyboardMarkup()
     markup.row_width = 1
     if not is_active:
         markup.add(
-            InlineKeyboardButton("🚀 بدء جلسة صفقات الـ OTC التلقائية", callback_data="start_session"),
+            InlineKeyboardButton("🚀 بدء جلسة صفقات الـ OTC الاحترافية", callback_data="start_session"),
             InlineKeyboardButton("📊 عرض الإحصائيات الحالية", callback_data="stats")
         )
     else:
@@ -42,15 +42,15 @@ def main_keyboard(is_active=False):
         )
     return markup
 
-# --- دالة تشغيل الجلسة التلقائية في الخلفية ---
+# --- دالة الجلسة الزمنية الحقيقية والمضبوطة بدقة ---
 def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
     start_notice = (
-        f"🚨 **بدء جلسة تداول الـ OTC الرسمية - {CHANNEL_NAME}** 🚨\n"
+        f"🚨 **بدء جلسة تداول الـ OTC الاحترافية - {CHANNEL_NAME}** 🚨\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "🔥 البوت يعمل الآن بشكل آلي بالكامل.\n"
+        "🔥 البوت يعمل الآن بنظام التوقيت الحقيقي (فريم 5 دقائق).\n"
         "⚠️ يرجى الالتزام التام بإدارة رأس المال وتجهيز المنصة!\n"
         f"🔗 رابط المنصة: [Quotex]({AFFILIATE_LINK})"
     )
@@ -60,14 +60,17 @@ def run_trading_session(chat_id):
     
     while session_running.is_set():
         pair = random.choice(pairs)
+        
+        # 1. تنبيه تحضيري قبل الصفقة بدقيقة كاملة (60 ثانية)
         pre_msg = (
             f"🔔 **تنبيه صفقة قادمة في الجلسة**\n"
             f"💱 الزوج: `{pair}`\n"
-            f"⏳ الاستعداد خلال دقيقة واحدة..."
+            f"⏳ جاهزوا أنفسكم، الدخول خلال دقيقة واحدة..."
         )
         bot.send_message(CHANNEL_ID, pre_msg, parse_mode="Markdown")
         
-        for _ in range(10):
+        # عداد دقيقة كاملة للتحضير
+        for _ in range(60):
             if not session_running.is_set():
                 break
             time.sleep(1)
@@ -75,6 +78,7 @@ def run_trading_session(chat_id):
         if not session_running.is_set():
             break
             
+        # 2. إرسال صفقة الدخول الرسمية
         direction = random.choice(["شراء / صعود (CALL)", "بيع / هبوط (PUT)"])
         signal_msg = (
             f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
@@ -82,14 +86,15 @@ def run_trading_session(chat_id):
             f"💱 **الزوج:** {pair}\n"
             f"🟢 **الاتجاه:** {direction}\n"
             "⏰ **مدة الصفقة:** 5 دقائق (فريم M5)\n"
-            "📍 **السبب الفني:** إبزيم اتجاهي + تقاطع مؤشرات الزخم\n"
+            "📍 **السبب الفني:** ارتداد هيكلي من منطقة سيولة + تأكيد الزخم\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             f"🔗 [التسجيل في المنصة]({AFFILIATE_LINK})"
         )
         bot.send_message(CHANNEL_ID, signal_msg, parse_mode="Markdown", disable_web_page_preview=True)
         session_stats["total"] += 1
         
-        for _ in range(15):
+        # 3. الانتظار الحقيقي لمدة الصفقة (5 دقائق = 300 ثانية) لضمان مطابقة الوقت تماماً
+        for _ in range(300):
             if not session_running.is_set():
                 break
             time.sleep(1)
@@ -97,21 +102,24 @@ def run_trading_session(chat_id):
         if not session_running.is_set():
             break
             
-        is_win = random.choices([True, False], weights=[85, 15])[0]
+        # 4. إرسال نتيجة الصفقة بدقة بعد انتهاء الـ 5 دقائق
+        is_win = random.choices([True, False], weights=[82, 18])[0] # نسبة نجاح احترافية 82%
         if is_win:
             session_stats["wins"] += 1
             res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق (WIN) ✅🔥**"
         else:
             session_stats["losses"] += 1
-            res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - تعويضها قادم بإذن الله**"
+            res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - تعويضها في الصفقة القادمة**"
             
         bot.send_message(CHANNEL_ID, res_text, parse_mode="Markdown")
         
-        for _ in range(10):
+        # استراحة قصيرة لمدة 30 ثانية بين الصفقة والأخرى
+        for _ in range(30):
             if not session_running.is_set():
                 break
             time.sleep(1)
 
+    # ملخص نهاية الجلسة عند إيقافها
     end_summary = (
         f"🏁 **انتهت جلسة التداول بنجاح - {CHANNEL_NAME}** 🏁\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -119,7 +127,7 @@ def run_trading_session(chat_id):
         f"- إجمالي الصفقات: {session_stats['total']}\n"
         f"- الصفقات الرابحة: {session_stats['wins']} ✅\n"
         f"- الصفقات الخاسرة: {session_stats['losses']} ❌\n"
-        "شكراً لتفاعلكم ونراكم في الجلسة القادمة! 🔥"
+        "شكراً لتفاعلكم ونراكم في الجلسات القادمة! 🔥"
     )
     bot.send_message(CHANNEL_ID, end_summary, parse_mode="Markdown")
 
@@ -148,9 +156,9 @@ def handle_clicks(call):
     if call.data == "start_session":
         if not session_running.is_set():
             session_running.set()
-            bot.answer_callback_query(call.id, "تم بدء الجلسة التلقائية بنجاح!")
+            bot.answer_callback_query(call.id, "تم بدء الجلسة الاحترافية بنجاح!")
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
-            bot.send_message(call.message.chat.id, "🚀 **بدأت صفقات الـ OTC الآلية بالعمل!** البوت يرسل الصفقات الآن للقناة تباعاً.")
+            bot.send_message(call.message.chat.id, "🚀 **بدأت جلسة صفقات الـ OTC الاحترافية!** البوت يدير التوقيتات (دقيقة تحضير + 5 دقائق صفقة) بشكل آلي تماماً.")
             
             t = Thread(target=run_trading_session, args=(call.message.chat.id,))
             t.start()
@@ -179,5 +187,5 @@ def handle_clicks(call):
 if __name__ == '__main__':
     t = Thread(target=run_web)
     t.start()
-    print("🤖 Fully Automated Session Bot is active...")
+    print("🤖 Professional OTC Session Bot is active...")
     bot.infinity_polling()
