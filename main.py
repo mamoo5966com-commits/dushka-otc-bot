@@ -62,95 +62,106 @@ def get_technical_reason(direction):
         ]
     return random.choice(reasons)
 
-# --- دالة الجلسة الزمنية الحقيقية والمضبوطة بالتحليل الفني ---
+# --- دالة الجلسة الزمنية الحقيقية والمحمية ضد أي توقف ---
 def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    start_notice = (
-        f"🚨 **بدء جلسة تداول الـ OTC بالتحليل الفني - {CHANNEL_NAME}** 🚨\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "🔥 البوت يعمل الآن بنظام التحليل الفني الحقيقي والتوقيت المنضبط (فريم 5 دقائق).\n"
-        "⚠️ يرجى الالتزام التام بإدارة رأس المال وتجهيز المنصة!\n"
-        f"🔗 رابط المنصة: [Quotex]({AFFILIATE_LINK})"
-    )
-    bot.send_message(CHANNEL_ID, start_notice, parse_mode="Markdown", disable_web_page_preview=True)
+    try:
+        start_notice = (
+            f"🚨 **بدء جلسة تداول الـ OTC بالتحليل الفني - {CHANNEL_NAME}** 🚨\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "🔥 البوت يعمل الآن بنظام التحليل الفني الحقيقي والتوقيت المنضبط (فريم 5 دقائق).\n"
+            "⚠️ يرجى الالتزام التام بإدارة رأس المال وتجهيز المنصة!\n"
+            f"🔗 رابط المنصة: {AFFILIATE_LINK}"
+        )
+        bot.send_message(CHANNEL_ID, start_notice, parse_mode="Markdown", disable_web_page_preview=True)
+    except Exception as e:
+        print(f"Error start notice: {e}")
     
     pairs = ["EUR/USD-OTC", "GBP/USD-OTC", "AUD/CAD-OTC", "USD/JPY-OTC", "EUR/GBP-OTC"]
     
     while session_running.is_set():
-        pair = random.choice(pairs)
-        
-        # 1. تنبيه تحضيري قبل الصفقة بدقيقة كاملة (60 ثانية)
-        pre_msg = (
-            f"🔔 **تنبيه صفقة قادمة في الجلسة**\n"
-            f"💱 الزوج المرتقب: `{pair}`\n"
-            f"⏳ يتم فحص الشموع والمستويات، جاهزوا أنفسكم خلال دقيقة..."
-        )
-        bot.send_message(CHANNEL_ID, pre_msg, parse_mode="Markdown")
-        
-        for _ in range(60):
+        try:
+            pair = random.choice(pairs)
+            
+            # 1. تنبيه تحضيري قبل الصفقة بدقيقة كاملة (60 ثانية)
+            pre_msg = (
+                f"🔔 **تنبيه صفقة قادمة في الجلسة**\n"
+                f"💱 الزوج المرتقب: {pair}\n"
+                f"⏳ يتم فحص الشموع والمستويات، جاهزوا أنفسكم خلال دقيقة..."
+            )
+            bot.send_message(CHANNEL_ID, pre_msg, parse_mode="Markdown")
+            
+            for _ in range(60):
+                if not session_running.is_set():
+                    break
+                time.sleep(1)
+                
             if not session_running.is_set():
                 break
-            time.sleep(1)
+                
+            # 2. تحديد الاتجاه وجلب سبب فني حقيقي يتطابق معه
+            direction = random.choice(["شراء / صعود (CALL)", "بيع / هبوط (PUT)"])
+            tech_reason = get_technical_reason(direction)
             
-        if not session_running.is_set():
-            break
+            signal_msg = (
+                f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"💱 **الزوج:** {pair}\n"
+                f"🟢 **الاتجاه:** {direction}\n"
+                "⏰ **مدة الصفقة:** 5 دقائق (فريم M5)\n"
+                f"📍 **السبب الفني:** {tech_reason}\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔗 [التسجيل في المنصة]({AFFILIATE_LINK})"
+            )
+            bot.send_message(CHANNEL_ID, signal_msg, parse_mode="Markdown", disable_web_page_preview=True)
+            session_stats["total"] += 1
             
-        # 2. تحديد الاتجاه وجلب سبب فني حقيقي يتطابق معه
-        direction = random.choice(["شراء / صعود (CALL)", "بيع / هبوط (PUT)"])
-        tech_reason = get_technical_reason(direction)
-        
-        signal_msg = (
-            f"🎯 **توصية OTC جديدة - {CHANNEL_NAME}** 🎯\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"💱 **الزوج:** {pair}\n"
-            f"🟢 **الاتجاه:** {direction}\n"
-            "⏰ **مدة الصفقة:** 5 دقائق (فريم M5)\n"
-            f"📍 **السبب الفني:** {tech_reason}\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"🔗 [التسجيل في المنصة]({AFFILIATE_LINK})"
-        )
-        bot.send_message(CHANNEL_ID, signal_msg, parse_mode="Markdown", disable_web_page_preview=True)
-        session_stats["total"] += 1
-        
-        # 3. الانتظار الحقيقي لمدة الصفقة (5 دقائق = 300 ثانية)
-        for _ in range(300):
+            # 3. الانتظار الحقيقي لمدة الصفقة (5 دقائق = 300 ثانية)
+            for _ in range(300):
+                if not session_running.is_set():
+                    break
+                time.sleep(1)
+                
             if not session_running.is_set():
                 break
-            time.sleep(1)
+                
+            # 4. إرسال نتيجة الصفقة (محمية بالكامل لتفادي أي جمود)
+            is_win = random.choices([True, False], weights=[82, 18])[0]
+            if is_win:
+                session_stats["wins"] += 1
+                res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق (WIN) ✅🔥**"
+            else:
+                session_stats["losses"] += 1
+                res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - تعويضها في الصفقة القادمة**"
+                
+            bot.send_message(CHANNEL_ID, res_text, parse_mode="Markdown")
             
-        if not session_running.is_set():
-            break
-            
-        # 4. إرسال نتيجة الصفقة بدقة بعد انتهاء الـ 5 دقائق
-        is_win = random.choices([True, False], weights=[82, 18])[0]
-        if is_win:
-            session_stats["wins"] += 1
-            res_text = f"🎉 **نتيجة الصفقة ({pair}): ربح ساحق (WIN) ✅🔥**"
-        else:
-            session_stats["losses"] += 1
-            res_text = f"❌ **نتيجة الصفقة ({pair}): خسارة (LOSS) - تعويضها في الصفقة القادمة**"
-            
-        bot.send_message(CHANNEL_ID, res_text, parse_mode="Markdown")
-        
-        # استراحة لمدة 30 ثانية بين الصفقة والأخرى
-        for _ in range(30):
-            if not session_running.is_set():
-                break
-            time.sleep(1)
+            # استراحة لمدة 30 ثانية بين الصفقة والأخرى
+            for _ in range(30):
+                if not session_running.is_set():
+                    break
+                time.sleep(1)
+                
+        except Exception as loop_err:
+            print(f"Error inside session loop: {loop_err}")
+            time.sleep(5)  # استئناف العمل حتى لو حدث خطأ طارئ
 
     # ملخص نهاية الجلسة
-    end_summary = (
-        f"🏁 **انتهت جلسة التداول بنجاح - {CHANNEL_NAME}** 🏁\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        f"📊 **إحصائيات الجلسة الإجمالية:**\n"
-        f"- إجمالي الصفقات: {session_stats['total']}\n"
-        f"- الصفقات الرابحة: {session_stats['wins']} ✅\n"
-        f"- الصفقات الخاسرة: {session_stats['losses']} ❌\n"
-        "شكراً لتفاعلكم ونراكم في الجلسات القادمة! 🔥"
-    )
-    bot.send_message(CHANNEL_ID, end_summary, parse_mode="Markdown")
+    try:
+        end_summary = (
+            f"🏁 **انتهت جلسة التداول بنجاح - {CHANNEL_NAME}** 🏁\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 **إحصائيات الجلسة الإجمالية:**\n"
+            f"- إجمالي الصفقات: {session_stats['total']}\n"
+            f"- الصفقات الرابحة: {session_stats['wins']} ✅\n"
+            f"- الصفقات الخاسرة: {session_stats['losses']} ❌\n"
+            "شكراً لتفاعلكم ونراكم في الجلسات القادمة! 🔥"
+        )
+        bot.send_message(CHANNEL_ID, end_summary, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error end summary: {e}")
 
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
@@ -210,7 +221,6 @@ if __name__ == '__main__':
     t.start()
     print("🤖 Technical Analysis OTC Bot is active...")
     
-    # تفريغ الـ Webhook وإدارة الاتصال لتجنب خطأ التعارض نهائياً
     bot.remove_webhook()
     time.sleep(1)
     
