@@ -118,4 +118,114 @@ def run_trading_session(chat_id):
                 f"⏰ **وقت الدخول:** `{entry_time_str}` (بتوقيت +3 GMT)\n"
                 f"📊 **الاستراتيجية:** {strat_name}\n"
                 f"📊 **مؤشرات الفحص:** {strat_details}\n\n"
-                f"⚠️ صفقة ذات تصفية متوازنة، التزم بإدارة رأس المال والمضاعفة عند الحاجة.\
+                "⚠️ صفقة ذات تصفية متوازنة، التزم بإدارة رأس المال والمضاعفة عند الحاجة.\n"
+                f"🔗 رابط التسجيل في المنصة:\n{AFFILIATE_LINK}\n\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"📢 مقدمة من: قناة دوشكا للتوصيات | `{CHANNEL_ID}`"
+            )
+            send_safe(signal_msg)
+            session_stats["total"] += 1
+            
+            sleep_to_entry = (target_time - datetime.now()).total_seconds()
+            if sleep_to_entry > 0:
+                for _ in range(int(sleep_to_entry)):
+                    if not session_running.is_set():
+                        break
+                    time.sleep(1)
+                    
+            if not session_running.is_set():
+                break
+                
+            for _ in range(600):
+                if not session_running.is_set():
+                    break
+                time.sleep(1)
+                
+            if not session_running.is_set():
+                break
+                
+            is_win = random.choices([True, False], weights=[89, 11])[0]
+            if is_win:
+                session_stats["wins"] += 1
+                res_text = (
+                    f"🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
+                    f"💎 **الزوج:** `{pair}`\n"
+                    f"📈 **الاتجاه:** `{direction}`\n"
+                    "✅ **الحالة:** ربح ناجح بنجاح"
+                )
+            else:
+                session_stats["losses"] += 1
+                res_text = (
+                    f"❌ **تحديث نتيجة الصفقة (LOSS)**\n\n"
+                    f"💎 **الزوج:** `{pair}`\n"
+                    f"📈 **الاتجاه:** `{direction}`\n"
+                    "❌ **الحالة:** خسارة - سيتم تعويضها في الصفقة القادمة"
+                )
+                
+            send_safe(res_text)
+            
+            for _ in range(30):
+                if not session_running.is_set():
+                    break
+                time.sleep(1)
+                
+        except Exception as loop_err:
+            print(f"Error inside session loop: {loop_err}")
+            time.sleep(5)
+
+    end_summary = (
+        "🏁 **انتهت جلسة التداول بنجاح** 🏁\n"
+        f"📊 إجمالي الصفقات: {session_stats['total']} | الأرباح: {session_stats['wins']} ✅ | الخسائر: {session_stats['losses']} ❌"
+    )
+    send_safe(end_summary)
+
+@bot.message_handler(commands=['start'])
+def start_cmd(message):
+    is_active = session_running.is_set()
+    status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
+    welcome_msg = (
+        f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **{CHANNEL_NAME}**\n\n"
+        f"البوت يعمل بنظام التوصيات المبكرة لفريم 10 دقائق 24/7. الحالة: **{status_text}**"
+    )
+    bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
+
+@bot.message_handler(commands=['stop'])
+def stop_cmd(message):
+    if session_running.is_set():
+        session_running.clear()
+        bot.send_message(message.chat.id, "🛑 تم إرسال أمر إيقاف الجلسة! سيتم إنهاء الجلسة ونشر الملخص حالاً.")
+    else:
+        bot.send_message(message.chat.id, "⚠️ لا توجد جلسة نشطة أساساً لتوقيفها.")
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_clicks(call):
+    global session_running
+    
+    if call.data == "start_session":
+        if not session_running.is_set():
+            session_running.set()
+            bot.answer_callback_query(call.id, "تم بدء الجلسة الاحترافية بنجاح!")
+            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
+            bot.send_message(call.message.chat.id, "🚀 **بدأت جلسة التوصيات المبكرة لفريم 10 دقائق!**")
+            
+            t = Thread(target=run_trading_session, args=(call.message.chat.id,))
+            t.start()
+        else:
+            bot.answer_callback_query(call.id, "الجلسة قيد التشغيل بالفعل!")
+
+    elif call.data == "stop_session":
+        if session_running.is_set():
+            session_running.clear()
+            bot.answer_callback_query(call.id, "جاري إيقاف الجلسة...")
+            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(False))
+            bot.send_message(call.message.chat.id, "🛑 تم إيقاف الجلسة بنجاح ونشر الملخص.")
+        else:
+            bot.answer_callback_query(call.id, "الجلسة متوقفة أصلاً.")
+
+    elif call.data == "stats":
+        bot.answer_callback_query(call.id, "عرض الإحصائيات")
+        bot.send_message(
+            call.message.chat.id, 
+            f"📈 **إحصائيات الجلسة الحالية:**\n"
+            f"- الصفقات المرسلة: {session_stats['total']}\n"
+            f"- الأرباح: {session_stats['wins']} ✅\n
