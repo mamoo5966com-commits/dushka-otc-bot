@@ -1,12 +1,22 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
+from flask import Flask
+from threading import Thread
 
 # بيانات البوت والقناة التجريبية
 TOKEN = "9086361088:AAErE0hgvSzCkCCSlobAxxK5gZXg6h6bvnM"
 CHANNEL_ID = "@doshkotc"
 
 bot = telebot.TeleBot(TOKEN)
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is active and running 24/7!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
 # --- لوحة التحكم الخاصة بك كمشرف ---
 def main_keyboard():
@@ -51,7 +61,7 @@ def handle_clicks(call):
         
         try:
             bot.send_message(CHANNEL_ID, signal_template, parse_mode="Markdown", disable_web_page_preview=True)
-            bot.send_message(call.message.chat.id, "✅ تم إرسال التوصية بنجاح إلى القناة التجريبية!")
+            bot.send_message(message_chat_id := call.message.chat.id, "✅ تم إرسال التوصية بنجاح إلى القناة التجريبية!")
         except Exception as e:
             bot.send_message(call.message.chat.id, f"❌ حدث خطأ أثناء الإرسال! تأكد أن البوت مشرف في القناة.\nالخطأ: {e}")
 
@@ -69,7 +79,9 @@ def handle_clicks(call):
         bot.answer_callback_query(call.id, "عرض الإحصائيات")
         bot.send_message(call.message.chat.id, "📈 **نتائج جلسة الـ OTC الأخيرة:**\n- إجمالي الصفقات: 5\n- الصفقات الناجحة: 4 ✅\n- الصفقات الخاسرة: 1 ❌\n- نسبة النجاح: 80%")
 
-# تشغيل البوت
 if __name__ == '__main__':
-    print("🤖 Cloud OTC Bot is active...")
+    # تحديث ملف المتطلبات ليتضمن Flask
+    t = Thread(target=run_web)
+    t.start()
+    print("🤖 Cloud OTC Bot with Web Server is active...")
     bot.infinity_polling()
