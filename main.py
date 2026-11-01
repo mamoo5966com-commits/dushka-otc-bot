@@ -73,7 +73,7 @@ def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    start_notice = "🟢 **تم تفعيل نظام التوصيات الاحترافية (فريم 10 دقائق M10)** 🔥"
+    start_notice = "🟢 تم تفعيل نظام التوصيات الاحترافية (فريم 10 دقائق M10) 🔥"
     send_safe(start_notice)
     
     pairs = ["USD/CAD", "EUR/USD", "GBP/USD", "USD/JPY", "AUD/CAD"]
@@ -111,17 +111,18 @@ def run_trading_session(chat_id):
             entry_time_str = target_time.strftime("%H:%M")
             
             signal_msg = (
-                f"🔥 **إشارة توصية فائقة الدقة (Balanced Confluence Bot)** 🔥\n\n"
-                f"💎 **الزوج:** `{pair}`\n"
-                f"⏳ **مدة الصفقة:** 10 دقائق (فريم M10)\n"
-                f"📈 **الاتجاه:** `{direction}`\n"
-                f"⏰ **وقت الدخول:** `{entry_time_str}` (بتوقيت +3 GMT)\n"
-                f"📊 **الاستراتيجية:** {strat_name}\n"
-                f"📊 **مؤشرات الفحص:** {strat_details}\n\n"
+                "🔥 إشارة توصية فائقة الدقة (Balanced Confluence Bot) 🔥\n\n"
+                f"💎 الزوج: {pair}\n"
+                "⏳ مدة الصفقة: 10 دقائق (فريم M10)\n"
+                f"📈 الاتجاه: {direction}\n"
+                f"⏰ وقت الدخول: {entry_time_str} (بتوقيت +3 GMT)\n"
+                f"📊 الاستراتيجية: {strat_name}\n"
+                f"📊 مؤشرات الفحص: {strat_details}\n\n"
                 "⚠️ صفقة ذات تصفية متوازنة، التزم بإدارة رأس المال والمضاعفة عند الحاجة.\n"
-                f"🔗 رابط التسجيل في المنصة:\n{AFFILIATE_LINK}\n\n"
+                "🔗 رابط التسجيل في المنصة:\n"
+                f"{AFFILIATE_LINK}\n\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
-                f"📢 مقدمة من: قناة دوشكا للتوصيات | `{CHANNEL_ID}`"
+                f"📢 مقدمة من: قناة دوشكا للتوصيات | {CHANNEL_ID}"
             )
             send_safe(signal_msg)
             session_stats["total"] += 1
@@ -148,18 +149,18 @@ def run_trading_session(chat_id):
             if is_win:
                 session_stats["wins"] += 1
                 res_text = (
-                    f"🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
-                    f"💎 **الزوج:** `{pair}`\n"
-                    f"📈 **الاتجاه:** `{direction}`\n"
-                    "✅ **الحالة:** ربح ناجح بنجاح"
+                    "🎉 تحديث نتيجة الصفقة (WIN) 🚀\n\n"
+                    f"💎 الزوج: {pair}\n"
+                    f"📈 الاتجاه: {direction}\n"
+                    "✅ الحالة: ربح ناجح بنجاح"
                 )
             else:
                 session_stats["losses"] += 1
                 res_text = (
-                    f"❌ **تحديث نتيجة الصفقة (LOSS)**\n\n"
-                    f"💎 **الزوج:** `{pair}`\n"
-                    f"📈 **الاتجاه:** `{direction}`\n"
-                    "❌ **الحالة:** خسارة - سيتم تعويضها في الصفقة القادمة"
+                    "❌ تحديث نتيجة الصفقة (LOSS)\n\n"
+                    f"💎 الزوج: {pair}\n"
+                    f"📈 الاتجاه: {direction}\n"
+                    "❌ الحالة: خسارة - سيتم تعويضها في الصفقة القادمة"
                 )
                 
             send_safe(res_text)
@@ -174,7 +175,7 @@ def run_trading_session(chat_id):
             time.sleep(5)
 
     end_summary = (
-        "🏁 **انتهت جلسة التداول بنجاح** 🏁\n"
+        "🏁 انتهت جلسة التداول بنجاح 🏁\n"
         f"📊 إجمالي الصفقات: {session_stats['total']} | الأرباح: {session_stats['wins']} ✅ | الخسائر: {session_stats['losses']} ❌"
     )
     send_safe(end_summary)
@@ -184,8 +185,8 @@ def start_cmd(message):
     is_active = session_running.is_set()
     status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
-        f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم **{CHANNEL_NAME}**\n\n"
-        f"البوت يعمل بنظام التوصيات المبكرة لفريم 10 دقائق 24/7. الحالة: **{status_text}**"
+        f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم {CHANNEL_NAME}\n\n"
+        f"البوت يعمل بنظام التوصيات المبكرة لفريم 10 دقائق 24/7. الحالة: {status_text}"
     )
     bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
 
@@ -206,7 +207,7 @@ def handle_clicks(call):
             session_running.set()
             bot.answer_callback_query(call.id, "تم بدء الجلسة الاحترافية بنجاح!")
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
-            bot.send_message(call.message.chat.id, "🚀 **بدأت جلسة التوصيات المبكرة لفريم 10 دقائق!**")
+            bot.send_message(call.message.chat.id, "🚀 بدأت جلسة التوصيات المبكرة لفريم 10 دقائق!")
             
             t = Thread(target=run_trading_session, args=(call.message.chat.id,))
             t.start()
@@ -226,6 +227,23 @@ def handle_clicks(call):
         bot.answer_callback_query(call.id, "عرض الإحصائيات")
         bot.send_message(
             call.message.chat.id, 
-            f"📈 **إحصائيات الجلسة الحالية:**\n"
+            "📈 إحصائيات الجلسة الحالية:\n"
             f"- الصفقات المرسلة: {session_stats['total']}\n"
-            f"- الأرباح: {session_stats['wins']} ✅\n
+            f"- الأرباح: {session_stats['wins']} ✅\n"
+            f"- الخسائر: {session_stats['losses']} ❌"
+        )
+
+if __name__ == '__main__':
+    t = Thread(target=run_web)
+    t.start()
+    print("🤖 Balanced Confluence Bot M10 is active...")
+    
+    bot.remove_webhook()
+    time.sleep(1)
+    
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
+        except Exception as e:
+            print(f"Polling error: {e}")
+            time.sleep(5)
