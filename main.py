@@ -7,7 +7,6 @@ import time
 import random
 from datetime import datetime, timedelta
 
-# بيانات البوت والقناة ورابط الأفلييت
 TOKEN = "9086361088:AAErE0hgvSzCkCCSlobAxxK5gZXg6h6bvnM"
 CHANNEL_ID = "@doshkotc"
 AFFILIATE_LINK = "https://broker-qx.pro/sign-up?lid=2388879"
@@ -16,7 +15,6 @@ CHANNEL_NAME = "Dushka Trading Signal VIP"
 bot = telebot.TeleBot(TOKEN)
 app = Flask('')
 
-# متغيرات لإدارة حالة الجلسة
 session_running = Event()
 session_stats = {"total": 0, "wins": 0, "losses": 0}
 
@@ -27,7 +25,6 @@ def home():
 def run_web():
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
-# --- لوحة التحكم ---
 def main_keyboard(is_active=False):
     markup = InlineKeyboardMarkup()
     markup.row_width = 1
@@ -43,7 +40,6 @@ def main_keyboard(is_active=False):
         )
     return markup
 
-# --- دالة إرسال آمنة تمنع أي جمود أو خطأ Markdown ---
 def send_safe(text):
     try:
         bot.send_message(CHANNEL_ID, text, parse_mode="Markdown", disable_web_page_preview=True)
@@ -54,7 +50,6 @@ def send_safe(text):
         except Exception as e2:
             print(f"Critical error sending message: {e2}")
 
-# --- استراتيجيات النخبة الشاملة ---
 def get_comprehensive_strategy(direction):
     if "صعود" in direction:
         strategies = [
@@ -74,14 +69,11 @@ def get_comprehensive_strategy(direction):
         ]
     return random.choice(strategies)
 
-# --- دالة الجلسة الزمنية مع إرسال التوصية مسبقاً قبل الموعد بـ 3 دقائق وتصميم مطابق للبوت القديم ---
 def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    start_notice = (
-        "🟢 **تم تفعيل نظام التوصيات الاحترافية (فريم 10 دقائق M10)** 🔥"
-    )
+    start_notice = "🟢 **تم تفعيل نظام التوصيات الاحترافية (فريم 10 دقائق M10)** 🔥"
     send_safe(start_notice)
     
     pairs = ["USD/CAD", "EUR/USD", "GBP/USD", "USD/JPY", "AUD/CAD"]
@@ -90,7 +82,6 @@ def run_trading_session(chat_id):
         try:
             pair = random.choice(pairs)
             
-            # حساب وقت الدخول المستهدف بدقة على مضاعفات الـ 10 دقائق القادمة (00, 10, 20, 30, 40, 50)
             now = datetime.now()
             current_minute = now.minute
             
@@ -102,7 +93,6 @@ def run_trading_session(chat_id):
             if target_minute <= current_minute:
                 target_time += timedelta(hours=1) if target_minute == 0 and current_minute >= 50 else timedelta(minutes=10)
                 
-            # إرسال التوصية قبل الموعد بـ 3 دقائق تماماً (180 ثانية)
             publish_time = target_time - timedelta(minutes=3)
             sleep_to_publish = (publish_time - datetime.now()).total_seconds()
             
@@ -115,13 +105,11 @@ def run_trading_session(chat_id):
             if not session_running.is_set():
                 break
                 
-            # توليد الاتجاه والاستراتيجية
             direction = random.choice(["CALL (صعود)", "PUT (هبوط)"])
             strat_name, strat_details = get_comprehensive_strategy(direction)
             
             entry_time_str = target_time.strftime("%H:%M")
             
-            # قالب التوصية المطابق تماماً لطلبك وللتصميم السابق
             signal_msg = (
                 f"🔥 **إشارة توصية فائقة الدقة (Balanced Confluence Bot)** 🔥\n\n"
                 f"💎 **الزوج:** `{pair}`\n"
@@ -130,71 +118,4 @@ def run_trading_session(chat_id):
                 f"⏰ **وقت الدخول:** `{entry_time_str}` (بتوقيت +3 GMT)\n"
                 f"📊 **الاستراتيجية:** {strat_name}\n"
                 f"📊 **مؤشرات الفحص:** {strat_details}\n\n"
-                f"⚠️ صفقة ذات تصفية متوازنة، التزم بإدارة رأس المال والمضاعفة عند الحاجة.\n"
-                f"🔗 رابط التسجيل في المنصة:\n{AFFILIATE_LINK}\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━\n"
-                f"📢 مقدمة من: قناة دوشكا للتوصيات | `{CHANNEL_ID}`"
-            )
-            send_safe(signal_msg)
-            session_stats["total"] += 1
-            
-            # الانتظار حتى حلول وقت الدخول تماماً (الدقائق الـ 3 المتبقية حتى يصل الوقت للصفر)
-            sleep_to_entry = (target_time - datetime.now()).total_seconds()
-            if sleep_to_entry > 0:
-                for _ in range(int(sleep_to_entry)):
-                    if not session_running.is_set():
-                        break
-                    time.sleep(1)
-                    
-            if not session_running.is_set():
-                break
-                
-            # الانتظار طوال مدة الصفقة (10 دقائق = 600 ثانية)
-            for _ in range(600):
-                if not session_running.is_set():
-                    break
-                time.sleep(1)
-                
-            if not session_running.is_set():
-                break
-                
-            # إرسال نتيجة الصفقة بتصميم مطابق للبوت السابق
-            is_win = random.choices([True, False], weights=[89, 11])[0]
-            if is_win:
-                session_stats["wins"] += 1
-                res_text = (
-                    f"🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
-                    f"💎 **الزوج:** `{pair}`\n"
-                    f"📈 **الاتجاه:** `{direction}`\n"
-                    f"✅ **الحالة:** ربح ناجح بنجاح"
-                )
-            else:
-                session_stats["losses"] += 1
-                res_text = (
-                    f"❌ **تحديث نتيجة الصفقة (LOSS)**\n\n"
-                    f"💎 **الزوج:** `{pair}`\n"
-                    f"📈 **الاتجاه:** `{direction}`\n"
-                    f"❌ **الحالة:** خسارة - سيتم تعويضها في الصفقة القادمة"
-                )
-                
-            send_safe(res_text)
-            
-            # استراحة قصيرة قبل التجهيز للصفقة التالية
-            for _ in range(30):
-                if not session_running.is_set():
-                    break
-                time.sleep(1)
-                
-        except Exception as loop_err:
-            print(f"Error inside session loop: {loop_err}")
-            time.sleep(5)
-
-    # ملخص نهاية الجلسة
-    end_summary = (
-        f"🏁 **انتهت جلسة التداول بنجاح** 🏁\n"
-        f"📊 إجمالي الصفقات: {session_stats['total']} | الأرباح: {session_stats['wins']} ✅ | الخسائر: {session_stats['losses']} ❌"
-    )
-    send_safe(end_summary)
-
-@bot.message_handler(commands=['start'])
-def start_cmd(message
+                f"⚠️ صفقة ذات تصفية متوازنة، التزم بإدارة رأس المال والمضاعفة عند الحاجة.\
