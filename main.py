@@ -62,7 +62,7 @@ def get_technical_reason(direction):
         ]
     return random.choice(reasons)
 
-# --- دالة الجلسة الزمنية الحقيقية والمحمية ضد أي توقف ---
+# --- دالة الجلسة الزمنية الحقيقية والمحمية ضد أي توقف أو جمود ---
 def run_trading_session(chat_id):
     global session_stats
     session_stats = {"total": 0, "wins": 0, "losses": 0}
@@ -127,7 +127,7 @@ def run_trading_session(chat_id):
             if not session_running.is_set():
                 break
                 
-            # 4. إرسال نتيجة الصفقة (محمية بالكامل لتفادي أي جمود)
+            # 4. إرسال نتيجة الصفقة (محمية بالكامل لتفادي أي جمود سواء ربح أو خسارة)
             is_win = random.choices([True, False], weights=[82, 18])[0]
             if is_win:
                 session_stats["wins"] += 1
@@ -146,7 +146,7 @@ def run_trading_session(chat_id):
                 
         except Exception as loop_err:
             print(f"Error inside session loop: {loop_err}")
-            time.sleep(5)  # استئناف العمل حتى لو حدث خطأ طارئ
+            time.sleep(5)
 
     # ملخص نهاية الجلسة
     try:
@@ -221,12 +221,17 @@ if __name__ == '__main__':
     t.start()
     print("🤖 Technical Analysis OTC Bot is active...")
     
-    bot.remove_webhook()
-    time.sleep(1)
+    # تنظيف شامل لأي اتصال معلق على سرفرات تيليجرام
+    try:
+        bot.remove_webhook()
+        time.sleep(2)
+    except Exception as e:
+        print(f"Webhook reset error: {e}")
     
+    # حلقة تشغيل متصلة وآمنة تماماً ضد أخطاء التعارض
     while True:
         try:
-            bot.infinity_polling(timeout=60, long_polling_timeout=60)
+            bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
         except Exception as e:
             print(f"Polling error: {e}")
             time.sleep(5)
