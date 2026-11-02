@@ -34,7 +34,7 @@ def main_keyboard(is_active=False):
     markup.row_width = 1
     if not is_active:
         markup.add(
-            InlineKeyboardButton("🚀 بدء جلسة استراتيجيات النخبة المتنوعة (M5, M10, M15)", callback_data="start_session"),
+            InlineKeyboardButton("🚀 بدء جلسة صفقات الـ OTC المتنوعة (M5, M10, M15)", callback_data="start_session"),
             InlineKeyboardButton("📊 عرض الإحصائيات الحالية", callback_data="stats")
         )
     else:
@@ -79,10 +79,11 @@ def run_trading_session(chat_id):
     global session_stats, last_signal_info
     session_stats = {"total": 0, "wins": 0, "losses": 0}
     
-    start_notice = "🟢 **تم تفعيل نظام التوصيات النخبوية متعددة الأوقات (M5, M10, M15)** 🔥"
+    start_notice = "🟢 **تم تفعيل نظام توصيات الـ OTC الحصرية ومتعددة الأوقات (M5, M10, M15)** 🔥"
     send_safe(start_notice)
     
-    pairs = ["USD/CAD", "EUR/USD", "GBP/USD", "USD/JPY", "AUD/CAD"]
+    # تم تخصيص الأزواج حصرياً لتعمل بنظام الـ OTC
+    pairs = ["USD/CAD (OTC)", "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)", "AUD/CAD (OTC)"]
     timeframes = [
         {"name": "5 دقائق (M5)", "duration": 5, "step": 5},
         {"name": "10 دقائق (M10)", "duration": 10, "step": 10},
@@ -130,7 +131,7 @@ def run_trading_session(chat_id):
             last_signal_info["timeframe"] = tf_name
             
             signal_msg = (
-                "🔥 **إشارة توصية فائقة الدقة (Balanced Confluence Bot)** 🔥\n\n"
+                "🔥 **إشارة توصية OTC فائقة الدقة (Balanced Confluence Bot)** 🔥\n\n"
                 f"💎 **الزوج:** {pair}\n"
                 f"⏳ **مدة الصفقة:** {tf_name}\n"
                 f"📈 **الاتجاه:** {direction}\n"
@@ -171,7 +172,7 @@ def run_trading_session(chat_id):
             time.sleep(5)
 
     end_summary = (
-        "🏁 **انتهت جلسة التداول بنجاح** 🏁\n"
+        "🏁 **انتهت جلسة تداول الـ OTC بنجاح** 🏁\n"
         f"📊 إجمالي الصفقات: {session_stats['total']} | الأرباح: {session_stats['wins']} ✅ | الخسائر: {session_stats['losses']} ❌"
     )
     send_safe(end_summary)
@@ -182,7 +183,7 @@ def start_cmd(message):
     status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
         f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم {CHANNEL_NAME}\n\n"
-        f"البوت يعمل بتوقيت (+3 GMT) وبدعم الفريمات المتنوعة (M5, M10, M15). الحالة: {status_text}"
+        f"البوت مخصص حصرياً لأزواج الـ OTC بتوقيت (+3 GMT) مع دعم الفريمات (M5, M10, M15). الحالة: {status_text}"
     )
     bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
 
@@ -201,9 +202,9 @@ def handle_clicks(call):
     if call.data == "start_session":
         if not session_running.is_set():
             session_running.set()
-            bot.answer_callback_query(call.id, "تم بدء الجلسة المتنوعة بنجاح!")
+            bot.answer_callback_query(call.id, "تم بدء جلسة الـ OTC بنجاح!")
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
-            bot.send_message(call.message.chat.id, "🚀 **بدأت الجلسة المتنوعة (M5, M10, M15) بتوقيت +3 GMT مع التحكم اليدوي!**")
+            bot.send_message(call.message.chat.id, "🚀 **بدأت جلسة صفقات الـ OTC (M5, M10, M15) بتوقيت +3 GMT!**")
             
             t = Thread(target=run_trading_session, args=(call.message.chat.id,))
             t.start()
@@ -214,7 +215,7 @@ def handle_clicks(call):
         if session_running.is_set() and last_signal_info["pair"]:
             session_stats["wins"] += 1
             win_text = (
-                "🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
+                "🎉 **تحديث نتيجة صفقة OTC (WIN)** 🚀\n\n"
                 f"💎 **الزوج:** `{last_signal_info['pair']}`\n"
                 f"⏳ **الفريم:** `{last_signal_info['timeframe']}`\n"
                 f"📈 **الاتجاه:** `{last_signal_info['direction']}`\n"
@@ -229,7 +230,7 @@ def handle_clicks(call):
         if session_running.is_set() and last_signal_info["pair"]:
             session_stats["losses"] += 1
             loss_text = (
-                "❌ **تحديث نتيجة الصفقة (LOSS)**\n\n"
+                "❌ **تحديث نتيجة صفقة OTC (LOSS)**\n\n"
                 f"💎 **الزوج:** `{last_signal_info['pair']}`\n"
                 f"⏳ **الفريم:** `{last_signal_info['timeframe']}`\n"
                 f"📈 **الاتجاه:** `{last_signal_info['direction']}`\n"
@@ -262,7 +263,7 @@ def handle_clicks(call):
 if __name__ == '__main__':
     t = Thread(target=run_web)
     t.start()
-    print("🤖 Multi-Timeframe OTC Bot is active...")
+    print("🤖 Exclusive OTC Bot is active...")
     
     bot.remove_webhook()
     time.sleep(1)
