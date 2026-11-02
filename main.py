@@ -147,7 +147,7 @@ def run_trading_session(chat_id):
             session_stats["total"] += 1
             
             try:
-                bot.send_message(chat_id, f"🔔 تم إرسال صفقة `{pair}` ({direction}) على فريم `{tf_name}` لوقت {entry_time_str}. تابعها في المنصة وعند انتهائها اضغط زر النتيجة.")
+                bot.send_message(chat_id, f"🔔 تم إرسال صفقة {pair} ({direction}) على فريم {tf_name} لوقت {entry_time_str}. تابعها في المنصة وعند انتهائها اضغط زر النتيجة.")
             except:
                 pass
             
@@ -182,4 +182,94 @@ def start_cmd(message):
     status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
         f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم {CHANNEL_NAME}\n\n"
-        f"البوت يعمل بتوقيت (+
+        f"البوت يعمل بتوقيت (+3 GMT) وبدعم الفريمات المتنوعة (M5, M10, M15). الحالة: {status_text}"
+    )
+    bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
+
+@bot.message_handler(commands=['stop'])
+def stop_cmd(message):
+    if session_running.is_set():
+        session_running.clear()
+        bot.send_message(message.chat.id, "🛑 تم إرسال أمر إيقاف الجلسة! سيتم إنهاء الجلسة ونشر الملخص حالاً.")
+    else:
+        bot.send_message(message.chat.id, "⚠️ لا توجد جلسة نشطة أساساً لتوقيفها.")
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_clicks(call):
+    global session_running, session_stats
+    
+    if call.data == "start_session":
+        if not session_running.is_set():
+            session_running.set()
+            bot.answer_callback_query(call.id, "تم بدء الجلسة المتنوعة بنجاح!")
+            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
+            bot.send_message(call.message.chat.id, "🚀 **بدأت الجلسة المتنوعة (M5, M10, M15) بتوقيت +3 GMT مع التحكم اليدوي!**")
+            
+            t = Thread(target=run_trading_session, args=(call.message.chat.id,))
+            t.start()
+        else:
+            bot.answer_callback_query(call.id, "الجلسة قيد التشغيل بالفعل!")
+
+    elif call.data == "manual_win":
+        if session_running.is_set() and last_signal_info["pair"]:
+            session_stats["wins"] += 1
+            win_text = (
+                "🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
+                f"💎 **الزوج:** `{last_signal_info['pair']}`\n"
+                f"⏳ **الفريم:** `{last_signal_info['timeframe']}`\n"
+                f"📈 **الاتجاه:** `{last_signal_info['direction']}`\n"
+                "✅ **الحالة:** ربح ناجح بامتياز"
+            )
+            send_safe(win_text)
+            bot.answer_callback_query(call.id, "✅ تم نشر نتيجة الربح في القناة بنجاح!")
+        else:
+            bot.answer_callback_query(call.id, "⚠️ لا توجد صفقة نشطة حالياً.")
+
+    elif call.data == "manual_loss":
+        if session_running.is_set() and last_signal_info["pair"]:
+            session_stats["losses"] += 1
+            loss_text = (
+                "❌ **تحديث نتيجة الصفقة (LOSS)**\n\n"
+                f"💎 **الزوج:** `{last_signal_info['pair']}`\n"
+                f"⏳ **الفريم:** `{last_signal_info['timeframe']}`\n"
+                f"📈 **الاتجاه:** `{last_signal_info['direction']}`\n"
+                "❌ **الحالة:** خسارة - سيتم تعويضها في الصفقة القادمة"
+            )
+            send_safe(loss_text)
+            bot.answer_callback_query(call.id, "❌ تم نشر نتيجة الخسارة في القناة بنجاح!")
+        else:
+            bot.answer_callback_query(call.id, "⚠️ لا توجد صفقة نشطة حالياً.")
+
+    elif call.data == "stop_session":
+        if session_running.is_set():
+            session_running.clear()
+            bot.answer_callback_query(call.id, "جاري إيقاف الجلسة...")
+            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(False))
+            bot.send_message(call.message.chat.id, "🛑 تم إيقاف الجلسة بنجاح ونشر الملخص.")
+        else:
+            bot.answer_callback_query(call.id, "الجلسة متوقفة أصلاً.")
+
+    elif call.data == "stats":
+        bot.answer_callback_query(call.id, "عرض الإحصائيات")
+        bot.send_message(
+            call.message.chat.id, 
+            "📈 **إحصائيات الجلسة الحالية:**\n"
+            f"- إجمالي الصفقات: {session_stats['total']}\n"
+            f"- الأرباح المسجلة: {session_stats['wins']} ✅\n"
+            f"- الخسائر المسجلة: {session_stats['losses']} ❌"
+        )
+
+if __name__ == '__main__':
+    t = Thread(target=run_web)
+    t.start()
+    print("🤖 Multi-Timeframe OTC Bot is active...")
+    
+    bot.remove_webhook()
+    time.sleep(1)
+    
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
+        except Exception as e:
+            print(f"Polling error: {e}")
+            time.sleep(5)
