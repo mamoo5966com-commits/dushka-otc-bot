@@ -12,7 +12,6 @@ CHANNEL_ID = "@doshkotc"
 AFFILIATE_LINK = "https://broker-qx.pro/sign-up?lid=2388879"
 CHANNEL_NAME = "Dushka Trading Signal VIP"
 
-# ضبط النطاق الزمني الثابت على +3 GMT لتتطابق الساعة مع وقتك المحلي تماماً
 TZ_GMT3 = timezone(timedelta(hours=3))
 
 bot = telebot.TeleBot(TOKEN)
@@ -98,7 +97,6 @@ def run_trading_session(chat_id):
             tf_duration = tf_obj["duration"]
             tf_step = tf_obj["step"]
             
-            # حساب الوقت بدقة تبعا للنطاق الزمني GMT+3 ومضاعفات الفريم المختار
             now = datetime.now(TZ_GMT3)
             current_minute = now.minute
             
@@ -110,7 +108,6 @@ def run_trading_session(chat_id):
             if target_minute <= current_minute:
                 target_time += timedelta(hours=1) if target_minute == 0 and current_minute >= (60 - tf_step) else timedelta(minutes=tf_step)
                 
-            # إرسال التوصية قبل الموعد بـ 3 دقائق تماماً
             publish_time = target_time - timedelta(minutes=3)
             sleep_to_publish = (publish_time - datetime.now(TZ_GMT3)).total_seconds()
             
@@ -154,7 +151,6 @@ def run_trading_session(chat_id):
             except:
                 pass
             
-            # الانتظار حتى وقت الدخول وانتهاء الصفقة (وقت التحضير + مدة الصفقة بالثواني)
             total_wait = (target_time - datetime.now(TZ_GMT3)).total_seconds() + (tf_duration * 60)
             if total_wait > 0:
                 for _ in range(int(total_wait)):
@@ -165,7 +161,6 @@ def run_trading_session(chat_id):
             if not session_running.is_set():
                 break
             
-            # فترة استراحة بين الصفقات
             for _ in range(200):
                 if not session_running.is_set():
                     break
@@ -187,43 +182,4 @@ def start_cmd(message):
     status_text = "نشطة 🚀" if is_active else "متوقفة 🛑"
     welcome_msg = (
         f"🙋‍♂️ أهلاً بك يا كابتن في لوحة تحكم {CHANNEL_NAME}\n\n"
-        f"البوت يعمل بتوقيت (+3 جغرافي) وبدعم الفريمات المتنوعة (M5, M10, M15). الحالة: {status_text}"
-    )
-    bot.send_message(message.chat.id, welcome_msg, parse_mode="Markdown", reply_markup=main_keyboard(is_active))
-
-@bot.message_handler(commands=['stop'])
-def stop_cmd(message):
-    if session_running.is_set():
-        session_running.clear()
-        bot.send_message(message.chat.id, "🛑 تم إرسال أمر إيقاف الجلسة! سيتم إنهاء الجلسة ونشر الملخص حالاً.")
-    else:
-        bot.send_message(message.chat.id, "⚠️ لا توجد جلسة نشطة أساساً لتوقيفها.")
-
-@bot.callback_query_handler(func=lambda call: True)
-def handle_clicks(call):
-    global session_running, session_stats
-    
-    if call.data == "start_session":
-        if not session_running.is_set():
-            session_running.set()
-            bot.answer_callback_query(call.id, "تم بدء الجلسة المتنوعة بنجاح!")
-            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=main_keyboard(True))
-            bot.send_message(call.message.chat.id, "🚀 **بدأت الجلسة المتنوعة (M5, M10, M15) بتوقيت +3 GMT مع التحكم اليدوي!**")
-            
-            t = Thread(target=run_trading_session, args=(call.message.chat.id,))
-            t.start()
-        else:
-            bot.answer_callback_query(call.id, "الجلسة قيد التشغيل بالفعل!")
-
-    elif call.data == "manual_win":
-        if session_running.is_set() and last_signal_info["pair"]:
-            session_stats["wins"] += 1
-            win_text = (
-                "🎉 **تحديث نتيجة الصفقة (WIN)** 🚀\n\n"
-                f"💎 **الزوج:** `{last_signal_info['pair']}`\n"
-                f"⏳ **الفريم:** `{last_signal_info['timeframe']}`\n"
-                f"📈 **الاتجاه:** `{last_signal_info['direction']}`\n"
-                "✅ **الحالة:** ربح ناجح بامتياز"
-            )
-            send_safe(win_text)
-            bot.
+        f"البوت يعمل بتوقيت (+
